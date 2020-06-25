@@ -13,4 +13,4 @@ jekyll_server: jekyll_doctor jekyll_build
 	bundle exec jekyll server --livereload
 
 publish: jekyll_build
-  ./tools/post_publish.sh
+	./tools/post_publish.sh

@@ -16,7 +16,7 @@ In personal repository you may use some cool nickname and personal email.
 
 ```sh
 git config user.name "Neo"
-git config user.email 0xff@matr.ix
+git config user.email "0xff@matr.ix"
 ```
 
 But there is an headache to not forget configure every repository to be corporate or personal after cloning.
@@ -38,7 +38,7 @@ Here is a functions added to .zsrc:
 _git_config_user(){
   case ${PWD} in
     *"mycompany/repos"*)
-      git config user.email kron@mycompany.com
+      git config user.email "denis@mycompany.com"
       git config user.name "Denis Bozhok"
       ;;
     *)
