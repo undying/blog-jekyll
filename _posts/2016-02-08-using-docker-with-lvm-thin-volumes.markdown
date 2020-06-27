@@ -41,7 +41,7 @@ lvcreate -n docker-pool-meta -L 744M docker
   Logical volume "docker-pool-meta" created.
 {% endhighlight %}
 
-<p class="border_solid_red"><i>Beware that this metadata size may not be enough for your needs. In my case it was to small, so I was using metadata size about 16GiB. This is the maximum supported size for now, and at this time I'm testing how does it works.</i></p>
+<p class="border_solid_red"><i>Beware that this metadata size may not be enough for your needs. In my case it was too small, so I was using metadata size about 16GiB. This is the maximum supported size for now, and at this time I'm testing how does it works.</i></p>
 
 Next, we need to create a volume for data. In my situations I just use the rest size of virtual group. First, I was trying to create volume this way:
 {% highlight bash %}
