@@ -8,8 +8,7 @@ jekyll_doctor:
 jekyll_build: jekyll_doctor
 	bundle exec jekyll build
 
-jekyll_server: jekyll_doctor jekyll_build
-	reset
+jekyll_server:
 	bundle exec jekyll server --livereload
 
 publish: jekyll_build
