@@ -14,3 +14,4 @@ jekyll_server: jekyll_doctor jekyll_build
 
 publish: jekyll_build
 	./tools/post_publish.sh
+	git commit _site -m "^_^" && git push
