@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Using docker with LVM Thin Pool"
+title: "Docker: Using docker with LVM Thin Pool"
 date: 2016-02-08 00:21:00 +0300
 tags: docker lvm datamapper thin
 commentIssueId: 5
