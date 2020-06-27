@@ -34,7 +34,11 @@ mermaid:
 
 paginate: 7
 
-exclude: [ vendor ]
+exclude:
+  - vendor
+  - Gemfile
+  - Makefile
 plugins:
   - jekyll-paginate
-  - jekyll-mermaid
+  - jekyll-sitemap
+

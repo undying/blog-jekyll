@@ -1,6 +1,4 @@
 
-require 'pry'
-
 module Jekyll
   module Tags
     class Mermaid < Liquid::Block
