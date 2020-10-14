@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "VIM, YCM and Pipenv"
+title: "VIM: YCM and Pipenv"
 date: 2020-10-14 23:03:02 +0300
 tags: vim ycm pipenv
 ---
