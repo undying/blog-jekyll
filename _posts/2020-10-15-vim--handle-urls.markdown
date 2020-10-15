@@ -25,6 +25,6 @@ nnoremap <leader>u :call HandleURL()<cr>
 """
 ```
 
-Now if we hit \u shortcut while our cursor is on the url line, this url will be opened in default browser.
+Now if we hit `\u` shortcut while our cursor is on the url line, this url will be opened in default browser.
 You may like to change xdg-open to any other program you need.
 
