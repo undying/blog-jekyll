@@ -5,12 +5,107 @@ date: 2020-05-22 09:48:49 +0300
 tags: postgresql cheatsheet
 ---
 
-## Intro
-Not so long ago I read a beautiful [book about PostgreSQL 11 Administration](https://www.labirint.ru/books/685536/) and decided to make a summary of interesting for my point of view details.
+<!-- vim-markdown-toc Marked -->
 
----
+* [PostgreSQL Administration Cheatsheet](#postgresql-administration-cheatsheet)
+  * [Intro](#intro)
+  * [New In PostgreSQL 11](#new-in-postgresql-11)
+    * [WAL Size](#wal-size)
+    * [CREATE STATISTICS](#create-statistics)
+    * [INCLUDE indexes](#include-indexes)
+    * [CREATE INDEX in parallel](#create-index-in-parallel)
+    * [pg_prewarm](#pg_prewarm)
+    * [Updated WINDOW Functions](#updated-window-functions)
+  * [Locks](#locks)
+    * [Using CTE with RETURNING](#using-cte-with-returning)
+    * [FOR SHARE and FOR UPDATE](#for-share-and-for-update)
+      * [FOR ... clauses by locking strength](#for-...-clauses-by-locking-strength)
+      * [FOR UPDATE SKIP LOCKED](#for-update-skip-locked)
+    * [Recommended Locks](#recommended-locks)
+  * [VACUUM](#vacuum)
+    * [autovacuum](#autovacuum)
+    * [Transaction ID Wraparound](#transaction-id-wraparound)
+    * [Transaction Duration](#transaction-duration)
+  * [Indexing](#indexing)
+    * [Costs Model](#costs-model)
+
+<!-- vim-markdown-toc -->
+
+# PostgreSQL Administration Cheatsheet
+
+## Intro
+
+This cheatsheet is based on the great
+[book about PostgreSQL 11 Administration](https://www.packtpub.com/product/mastering-postgresql-11-second-edition/9781789537819)
+
+Big thanks to it's author - Hans-Jürgen Schönig.
+
+## New In PostgreSQL 11
+
+### WAL Size
+
+Default WAL size is: **16M**
+
+To change size during setup: `initdb -D /pgdata --wal-segsize=32`
+
+### CREATE STATISTICS
+
+**Note:** _This actually from PostgreSQL 10._
+
+_CREATE STATISTICS will create a new extended statistics object tracking data about the specified table, foreign table or materialized view. The statistics object will be created in the current database and will be owned by the user issuing the command._
+
+The great thing is that statistics collected by every column you need.
+
+References:
+
+- [CREATE STATISTICS](https://www.postgresql.org/docs/10/sql-createstatistics.html)
+- [The Postgres 10 feature you didn't know about: CREATE STATISTICS ](https://www.citusdata.com/blog/2018/03/06/postgres-planner-and-its-usage-of-statistics/)
+
+### INCLUDE indexes
+
+In addition to the indexed column, the index can contain an additional column.
+This can be usefull to avoid table scan and use only index scan.
+
+`CREATE UNIQUE INDEX some_name ON person USING btree (id) INCLUDE (name);`
+
+Note: *Always select only those columns you need. When using `SELECT *` you gathering all data from table and that hurts your performance.*
+
+### CREATE INDEX in parallel
+
+PostgreSQL can build indexes while leveraging multiple CPUs in order to process the table rows faster. This feature is known as parallel index build. For index methods that support building indexes in parallel (currently, only B-tree), [maintenance_work_mem](https://www.postgresql.org/docs/11/runtime-config-resource.html#GUC-MAINTENANCE-WORK-MEM) specifies the maximum amount of memory that can be used by each index build operation as a whole, regardless of how many worker processes were started. Generally, a cost model automatically determines how many worker processes should be requested, if any.
+
+Parallel index builds may benefit from increasing maintenance_work_mem where an equivalent serial index build will see little or no benefit. Note that maintenance_work_mem may influence the number of worker processes requested, since parallel workers must have at least a 32MB share of the total maintenance_work_mem budget. There must also be a remaining 32MB share for the leader process. Increasing [max_parallel_maintenance_workers](https://www.postgresql.org/docs/11/runtime-config-resource.html#GUC-MAX-PARALLEL-WORKERS-MAINTENANCE) may allow more workers to be used, which will reduce the time needed for index creation, so long as the index build is not already I/O bound. Of course, there should also be sufficient CPU capacity that would otherwise lie idle.
+
+References:
+
+- [CREATE INDEX](https://www.postgresql.org/docs/11/sql-createindex.html)
+- [PostgreSQL: Parallel CREATE INDEX for better performance](https://www.cybertec-postgresql.com/en/postgresql-parallel-create-index-for-better-performance/)
+
+### pg_prewarm
+
+```SQL
+CREATE EXTENSION pg_prewarm;
+SELECT pg_prewarm('tablename');
+```
+
+References:
+
+- [Prewarming PostgreSQL I/O caches](https://www.cybertec-postgresql.com/en/prewarming-postgresql-i-o-caches/)
+
+### Updated WINDOW Functions
+
+- [RANGE BETWEEN](https://www.postgresqltutorial.com/postgresql-between/)
+- EXCLUDE
+  - `EXCLUDE CURRENT ROW`
+  - `EXCLUDE TIES`
+
+References:
+
+- [Timeseries: EXCLUDE TIES, CURRENT ROW and GROUP](https://www.cybertec-postgresql.com/en/timeseries-exclude-ties-current-row-and-group/)
+- [Window Functions](https://www.postgresql.org/docs/11/tutorial-window.html)
 
 ## Locks
+
 ### Using CTE with RETURNING
 
 When you need to update record and use result value and don't want to use explicit blocking or long transaction, it's possible to use CTE and UPDATE with RETURNING statement.
@@ -135,15 +230,18 @@ Wraparound References:
 Beyond the threshold, old data may be vacuumed away. This can help prevent bloat in the face of snapshots which remain in use for a long time. To prevent incorrect results due to cleanup of data which would otherwise be visible to the snapshot, an error is generated when the snapshot is older than this threshold and the snapshot is used to read a page which has been modified since the snapshot was built. [More details](https://www.postgresql.org/docs/11/runtime-config-resource.html#GUC-OLD-SNAPSHOT-THRESHOLD).
 
 ## Indexing
+
 ### Costs Model
 
 Costs formula for `Seq Scan`:
+
 ```
 (blocks to read * seq_page_cost) \
   + (rows scanned * cpu_tuple_cost + rows scanned * cpu_operator_cost)
 ```
 
 To get sum of block per table:
+
 ```sql
 SELECT pg_relation_size('table_name') / 8192.0;
 ```
@@ -159,10 +257,9 @@ For parallel jobs:
   - [min_parallel_index_scan_size](https://www.postgresql.org/docs/11/runtime-config-query.html#GUC-MIN-PARALLEL-INDEX-SCAN-SIZE): Sets the minimum amount of index data that must be scanned in order for a parallel scan to be considered. The default is 512 kilobytes (512kB).
 
 References:
-  - https://www.postgresql.org/docs/11/runtime-config-query.html
-  - https://www.postgresql.org/docs/11/index-cost-estimation.html
 
-
+- https://www.postgresql.org/docs/11/runtime-config-query.html
+- https://www.postgresql.org/docs/11/index-cost-estimation.html
 
 <style>
 table{
