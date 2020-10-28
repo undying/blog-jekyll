@@ -16,6 +16,14 @@ tags: postgresql cheatsheet
     * [CREATE INDEX in parallel](#create-index-in-parallel)
     * [pg_prewarm](#pg_prewarm)
     * [Updated WINDOW Functions](#updated-window-functions)
+    * [JIT Compilation](#jit-compilation)
+    * [Better Partitioning](#better-partitioning)
+      * [Default Partition](#default-partition)
+      * [Partition Key Updating](#partition-key-updating)
+      * [Hash Partitioning](#hash-partitioning)
+      * [Index Created on Parent Table](#index-created-on-parent-table)
+    * [Better Support Of Stored Procedures](#better-support-of-stored-procedures)
+    * [Faster ALTER TABLE](#faster-alter-table)
   * [Locks](#locks)
     * [Using CTE with RETURNING](#using-cte-with-returning)
     * [FOR SHARE and FOR UPDATE](#for-share-and-for-update)
@@ -64,11 +72,11 @@ References:
 ### INCLUDE indexes
 
 In addition to the indexed column, the index can contain an additional column.
-This can be usefull to avoid table scan and use only index scan.
+This can be useful to avoid table scan and use only index scan.
 
 `CREATE UNIQUE INDEX some_name ON person USING btree (id) INCLUDE (name);`
 
-Note: *Always select only those columns you need. When using `SELECT *` you gathering all data from table and that hurts your performance.*
+Note: Always select only those columns you need. When using `SELECT *` you gathering all data from table and that hurts your performance.
 
 ### CREATE INDEX in parallel
 
@@ -103,6 +111,80 @@ References:
 
 - [Timeseries: EXCLUDE TIES, CURRENT ROW and GROUP](https://www.cybertec-postgresql.com/en/timeseries-exclude-ties-current-row-and-group/)
 - [Window Functions](https://www.postgresql.org/docs/11/tutorial-window.html)
+
+### JIT Compilation
+
+Just-in-Time (JIT) compilation is the process of turning some form of interpreted program evaluation into a native program, and doing so at run time. For example, instead of using general-purpose code that can evaluate arbitrary SQL expressions to evaluate a particular SQL predicate like WHERE a.col = 3, it is possible to generate a function that is specific to that expression and can be natively executed by the CPU, yielding a speedup.
+
+PostgreSQL has builtin support to perform JIT compilation using LLVM when PostgreSQL is built with --with-llvm.
+
+References:
+
+- [JIT Reason](https://www.postgresql.org/docs/11/jit-reason.html)
+
+### Better Partitioning
+
+#### Default Partition
+
+If row does not match any partition already created, it's now can be moved to the default partition.
+
+```sql
+CREATE TABLE default_part PARTITION OF another_table DEFAULT;
+```
+
+#### Partition Key Updating
+
+Now when updating the value of partition key, row is moved to another partition by PostgreSQL automatically.
+
+#### Hash Partitioning
+
+```sql
+CREATE TABLE tab(i int, i text) PARTITION BY HASH (i);
+CREATE TABLE tab_0 PARTITION OF tab FOR VALUES WITH (MODULUS 4, REMAINDER 0);
+```
+
+#### Index Created on Parent Table
+
+Now when creating index on parent table it automatically created on all child\`s tables.
+Also, creating "global" unique index on parent table creates unique index on all child\`s table.
+
+References:
+
+- [A Guide to Partitioning Data In PostgreSQL](https://severalnines.com/database-blog/guide-partitioning-data-postgresql)
+- [How to Take Advantage of the New Partitioning Features in PostgreSQL 11](https://severalnines.com/database-blog/how-take-advantage-new-partitioning-features-postgresql-11)
+- [Table Partitioning](https://www.postgresql.org/docs/11/ddl-partitioning.html)
+
+### Better Support Of Stored Procedures
+
+Main difference between functions ans procedures in PostgreSQL is that function is a part of transaction.
+But procedure may contain multiple transactions.
+
+```sql
+CREATE PROCEDURE test_proc()
+  LANGUAGE plpgsql
+  AS $$
+    BEGIN
+      CREATE TABLE a (aid int);
+      CREATE TABLE b (bid int);
+      COMMIT;
+      CREATE TABLE c (cid int);
+      ROLLBACK;
+    END;
+  $$;
+```
+
+### Faster ALTER TABLE
+
+To add a column to the table we can use such command:
+
+```sql
+ALTER TABLE x ADD COLUMN y int;
+ALTER TABLE x ADD COLUMN z int DEFAULT 57;
+```
+
+First command will work fast always, because it simply updates system catalog.
+Second command will work fast only in PostgreSQL 11 and newer versions.
+In the PG10 this will lead table to be rewritten which may be slow.
 
 ## Locks
 
