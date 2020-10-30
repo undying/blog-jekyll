@@ -24,7 +24,10 @@ tags: postgresql cheatsheet
       * [Index Created on Parent Table](#index-created-on-parent-table)
     * [Better Support Of Stored Procedures](#better-support-of-stored-procedures)
     * [Faster ALTER TABLE](#faster-alter-table)
-  * [Locks](#locks)
+  * [Locks and Transactions](#locks-and-transactions)
+    * [now() function](#now()-function)
+    * [SAVEPOINT](#savepoint)
+    * [DDL commands are transaction safe](#ddl-commands-are-transaction-safe)
     * [Using CTE with RETURNING](#using-cte-with-returning)
     * [FOR SHARE and FOR UPDATE](#for-share-and-for-update)
       * [FOR ... clauses by locking strength](#for-...-clauses-by-locking-strength)
@@ -186,7 +189,71 @@ First command will work fast always, because it simply updates system catalog.
 Second command will work fast only in PostgreSQL 11 and newer versions.
 In the PG10 this will lead table to be rewritten which may be slow.
 
-## Locks
+## Locks and Transactions
+
+### now() function
+
+`now()` function returns time of the transaction beginning. So calling it twice in one transaction will return the same data. If you need the real time, you have to use function `clock_timestamp()`
+
+### [SAVEPOINT](https://www.postgresql.org/docs/11/sql-savepoint.html)
+
+In long transaction which may fail in the middle of process it's possible to use savepoint and rollback to it saving the job that already completed successfully.
+
+```sql
+postgres=# BEGIN;
+BEGIN
+postgres=# SELECT 1;
+ ?column?
+----------
+        1
+(1 row)
+
+postgres=# SAVEPOINT a;
+SAVEPOINT
+postgres=# SELECT 1 / 0;
+ERROR:  division by zero
+postgres=# SELECT 2;
+ERROR:  current transaction is aborted, commands ignored until end of transaction block
+postgres=# ROLLBACK TO SAVEPOINT a;
+ROLLBACK
+postgres=# SELECT 3;
+ ?column?
+----------
+        3
+(1 row)
+
+postgres=# COMMIT;
+COMMIT
+```
+
+### DDL commands are transaction safe
+
+It's possible to create and modify tables in transaction then rollback all changes during error.
+
+```sql
+postgres=# CREATE DATABASE test;
+CREATE DATABASE
+postgres=# \c test
+You are now connected to database "test" as user "postgres".
+test=# \d
+Did not find any relations.
+test=# BEGIN;
+BEGIN
+test=# CREATE TABLE t_test (id int);
+CREATE TABLE
+test=# ALTER TABLE t_test ALTER COLUMN id TYPE int8;
+ALTER TABLE
+test=# \d t_test;
+              Table "public.t_test"
+ Column |  Type  | Collation | Nullable | Default
+--------+--------+-----------+----------+---------
+ id     | bigint |           |          |
+
+test=# ROLLBACK;
+ROLLBACK
+test=# \d
+Did not find any relations.
+```
 
 ### Using CTE with RETURNING
 
