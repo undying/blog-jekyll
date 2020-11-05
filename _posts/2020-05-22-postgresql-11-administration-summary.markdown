@@ -28,6 +28,8 @@ tags: postgresql cheatsheet
     * [now() function](#now()-function)
     * [SAVEPOINT](#savepoint)
     * [DDL commands are transaction safe](#ddl-commands-are-transaction-safe)
+    * [Explicit Locking](#explicit-locking)
+    * [FOR SHARE and FOR UPDATE](#for-share-and-for-update)
     * [Using CTE with RETURNING](#using-cte-with-returning)
     * [FOR SHARE and FOR UPDATE](#for-share-and-for-update)
       * [FOR ... clauses by locking strength](#for-...-clauses-by-locking-strength)
@@ -253,6 +255,84 @@ test=# ROLLBACK;
 ROLLBACK
 test=# \d
 Did not find any relations.
+```
+
+### Explicit Locking
+
+Sometime it's needed to use locks to fix this kind of errors:
+
+| Transaction 1                            | Transaction 2                            |
+|------------------------------------------|------------------------------------------|
+| BEGIN;                                   | BEGIN;                                   |
+| SELECT max(id) FROM product;             | SELECT max(id) FROM product;             |
+| -- query returned 17                     | -- query returned 17                     |
+| -- user added product 18                 | -- user added product 18                 |
+| INSERT INTO product ... VALUES (18, ...) | INSERT INTO product ... VALUES (18, ...) |
+| COMMIT;                                  | COMMIT;                                  |
+
+This error can be avoided this way:
+
+```sql
+BEGIN;
+LOCK TABLE product in ACCESS EXCLUSIVE MODE;
+INSERT INTO product SELECT max(id) + 1, ... FROM product;
+COMMIT;
+```
+
+But this is very bad for performance reasons.
+Alternative solutions is to separate tables in this way:
+
+```sql
+CREATE TABLE t_invoice (id int PRIMARY KEY);
+CREATE TABLE t_watermark (id int);
+INSERT INTO t_watermark VALUES (0);
+WITH x AS (UPDATE t_watermark SET id = id + 1 RETURNING id)
+  INSERT INTO t_invoice
+  SELECT * FROM x RETURNING id;
+```
+
+Only one UPDATE can be occurred at once but this does not blocks SELECT queries.
+
+References:
+
+- [Explicit Locking](https://www.postgresql.org/docs/11/explicit-locking.html)
+
+### FOR SHARE and FOR UPDATE
+
+This is **wrong**:
+
+```sql
+BEGIN;
+SELECT * FROM invoice WHERE processed = false;
+-- now make some work with returned data
+UPDATE invoice SET processed = true ...
+COMMIT;
+```
+
+Multiple requests can select the same data and then try to insert updated data.
+`SELECT FOR UPDATE` for the rescue.
+
+```sql
+BEGIN;
+SELECT * FROM invoice WHERE processed = false FOR UPDATE;
+-- now processing data with modifications
+UPDATE invoice SET processed = true;
+COMMIT;
+```
+
+When running multiple transactions on the same rows the second one will wait until the first one will end. But we can skip them with `NOWAIT`.
+
+| Transaction 1                                      | Transaction 2                                           |
+|----------------------------------------------------|---------------------------------------------------------|
+| BEGIN;                                             | BEGIN;                                                  |
+| SELECT ... FROM table WHERE ... FOR UPDATE NOWAIT; |                                                         |
+| -- processing                                      | SELECT ... FROM tab WHERE ... FOR UPDATE NOWAIT;        |
+| -- still processing                                | ERROR: could not obtain lock on row in relation "table" |
+
+There is also parameter `lock_timeout` to set how long we are ready to wait lock.
+
+```sql
+SET lock_timeout TO 5000; -- set timeout to 5 seconds
 ```
 
 ### Using CTE with RETURNING
