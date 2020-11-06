@@ -30,6 +30,7 @@ tags: postgresql cheatsheet
     * [DDL commands are transaction safe](#ddl-commands-are-transaction-safe)
     * [Explicit Locking](#explicit-locking)
     * [FOR SHARE and FOR UPDATE](#for-share-and-for-update)
+      * [SKIP LOCKED](#skip-locked)
     * [Using CTE with RETURNING](#using-cte-with-returning)
     * [FOR SHARE and FOR UPDATE](#for-share-and-for-update)
       * [FOR ... clauses by locking strength](#for-...-clauses-by-locking-strength)
@@ -334,6 +335,28 @@ There is also parameter `lock_timeout` to set how long we are ready to wait lock
 ```sql
 SET lock_timeout TO 5000; -- set timeout to 5 seconds
 ```
+
+#### SKIP LOCKED
+
+`SELECT FOR UDATE` can block others requests for UPDATE
+
+| Transaction 1                             | Transaction 2                             |
+|-------------------------------------------|-------------------------------------------|
+| BEING;                                    | BEING;                                    |
+| SELECT ... FROM table LIMIT 1 FOR UPDATE; |                                           |
+| -- waiting for user action                | SELECT ... FROM table LIMIT 1 FOR UPDATE; |
+| -- waiting for user action                | -- waiting Transaction 1                  |
+
+To fix that we can use `SKIP LOCKED`.
+
+| Transaction 1                                       | Transaction 2                                       |
+|-----------------------------------------------------|-----------------------------------------------------|
+| BEGIN;                                              | BEGIN;                                              |
+| SELECT * FROM table LIMIT 2 FOR UPDATE SKIP LOCKED; | SELECT * FROM table LIMIT 2 FOR UPDATE SKIP LOCKED; |
+| -- returns first pair of not locked rows            | -- returns second pair of not locked rows           |
+
+**Note**:
+When using `FOR UPDATE` on table with `FOREIGN KEY`, both tables will be blocked.
 
 ### Using CTE with RETURNING
 
