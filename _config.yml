@@ -1,3 +1,5 @@
+---
+
 # Welcome to Jekyll!
 #
 # This config file is meant for settings that affect your whole blog, values
@@ -13,15 +15,16 @@ description: > # this means to ignore newlines until "baseurl:"
   when working with a variety of technologies. This includes any kind
   of computer technologies, Open Software, Linux and many more.
 
-baseurl: "" # the subpath of your site, e.g. /blog
-url: "http://undying.github.io" # the base hostname & protocol for your site
+baseurl: ""  # the subpath of your site, e.g. /blog
+url: "http://undying.github.io"  # the base hostname & protocol for your site
 
-github_username:  undying
+github_username: undying
 linkedin_username: bozhok-denis
 facebook_id: 100009455237641
-facebook_username: Kron
+facebook_username: undying.k
 instagram_username: undying.k
 twitter_username: undying_k
+buymeacoffee_username: undying
 
 # Build settings
 markdown: kramdown
@@ -35,9 +38,11 @@ mermaid:
 paginate: 7
 
 exclude:
-  - vendor
   - Gemfile
+  - Gemfile.lock
   - Makefile
+  - vendor
+
 plugins:
   - jekyll-paginate
   - jekyll-sitemap
