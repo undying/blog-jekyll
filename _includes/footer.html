@@ -1,8 +1,6 @@
 
 <footer class="site-footer">
-
   <div class="wrapper">
-
     <h2 class="footer-heading">{{ site.title }}</h2>
 
     <div class="footer-col-wrapper">
@@ -42,6 +40,12 @@
           {% if site.twitter_username %}
           <li>
             {% include icon-twitter.html username=site.twitter_username %}
+          </li>
+          {% endif %}
+
+          {% if site.buymeacoffee_username %}
+          <li>
+            {% include icon-buymeacoffee.html username=site.buymeacoffee_username %}
           </li>
           {% endif %}
         </ul>
